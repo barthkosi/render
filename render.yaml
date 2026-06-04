@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: youtube-shortcut-helper
+    env: docker
+    plan: starter
+    autoDeploy: false
+    healthCheckPath: /health
+    envVars:
+      - key: API_TOKEN
+        generateValue: true
