@@ -5,9 +5,9 @@ from tempfile import TemporaryDirectory
 from typing import Annotated
 
 from fastapi import FastAPI, Header, HTTPException
-from starlette.background import BackgroundTask
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, HttpUrl
+from starlette.background import BackgroundTask
 from yt_dlp import YoutubeDL
 
 
@@ -44,11 +44,8 @@ def download_video(
     temp_path = Path(temp_dir.name)
     output_template = str(Path(temp_dir.name) / "%(title).80s.%(ext)s")
 
-    options = {
-        "format": "best[ext=mp4]/bv*+ba/best",
-        "format_sort": ["res:720", "ext:mp4:m4a"],
+    base_options = {
         "outtmpl": output_template,
-        "merge_output_format": "mp4",
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
@@ -64,28 +61,58 @@ def download_video(
                 status_code=500,
                 detail="YOUTUBE_COOKIES_BASE64 is not valid base64.",
             ) from exc
-        options["cookiefile"] = str(cookies_path)
+        base_options["cookiefile"] = str(cookies_path)
 
     try:
-        with YoutubeDL(options) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = Path(ydl.prepare_filename(info)).with_suffix(".mp4")
-            if not filename.exists():
-                matches = list(Path(temp_dir.name).glob("*"))
-                if not matches:
-                    raise RuntimeError("Download finished but no output file was found.")
-                filename = matches[0]
+        filename = _download_with_fallbacks(url, temp_path, base_options)
     except Exception as exc:
         temp_dir.cleanup()
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+    media_type = "video/mp4" if filename.suffix.lower() == ".mp4" else "application/octet-stream"
     response = FileResponse(
         path=filename,
         filename=filename.name,
-        media_type="video/mp4",
+        media_type=media_type,
         background=BackgroundTask(temp_dir.cleanup),
     )
     return response
+
+
+def _download_with_fallbacks(url: str, temp_path: Path, base_options: dict) -> Path:
+    attempts = [
+        {
+            **base_options,
+            "format": "best[ext=mp4]/bestvideo*+bestaudio/best",
+            "format_sort": ["res:720", "ext:mp4:m4a"],
+            "merge_output_format": "mp4",
+        },
+        {
+            **base_options,
+            "format": "best",
+        },
+        base_options,
+    ]
+
+    last_error = None
+    for options in attempts:
+        try:
+            with YoutubeDL(options) as ydl:
+                info = ydl.extract_info(url, download=True)
+                filename = Path(ydl.prepare_filename(info))
+                mp4_filename = filename.with_suffix(".mp4")
+                if mp4_filename.exists():
+                    return mp4_filename
+                if filename.exists():
+                    return filename
+                matches = [path for path in temp_path.glob("*") if path.name != "cookies.txt"]
+                if matches:
+                    return max(matches, key=lambda path: path.stat().st_size)
+                raise RuntimeError("Download finished but no output file was found.")
+        except Exception as exc:
+            last_error = exc
+
+    raise last_error or RuntimeError("Download failed.")
 
 
 if __name__ == "__main__":
