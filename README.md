@@ -30,8 +30,14 @@ Avoid serverless platforms for this. Video downloads can run longer than typical
 API_TOKEN=make-a-long-random-password
 ```
 
-5. Deploy.
-6. Your API URL will look like:
+5. If YouTube returns a "Sign in to confirm you're not a bot" error, add another environment variable:
+
+```text
+YOUTUBE_COOKIES_BASE64=base64-encoded-cookies-file
+```
+
+6. Deploy.
+7. Your API URL will look like:
 
 ```text
 https://your-service-name.onrender.com/download
@@ -58,6 +64,26 @@ http://YOUR-SERVER-IP:8787/download
 ```
 
 For a public VPS, put it behind HTTPS with Caddy, Nginx Proxy Manager, or Cloudflare Tunnel.
+
+## YouTube Cookies
+
+Some remote hosts are blocked by YouTube unless `yt-dlp` has browser cookies. To add cookies:
+
+1. Export YouTube cookies as a Netscape-format `cookies.txt` file from a browser where you are signed in.
+2. Base64-encode the file.
+3. Add the encoded text to Render as:
+
+```text
+YOUTUBE_COOKIES_BASE64=your-encoded-cookies
+```
+
+On Windows PowerShell:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\cookies.txt"))
+```
+
+Cookies are sensitive. Use a secondary account if possible, keep the env var private, and rotate the cookies if they stop working.
 
 ## iOS Shortcut Setup
 

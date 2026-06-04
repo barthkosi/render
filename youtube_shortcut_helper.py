@@ -1,3 +1,4 @@
+import base64
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -12,6 +13,7 @@ from yt_dlp import YoutubeDL
 
 app = FastAPI(title="YouTube Shortcut Helper")
 API_TOKEN = os.getenv("API_TOKEN")
+YOUTUBE_COOKIES_BASE64 = os.getenv("YOUTUBE_COOKIES_BASE64")
 
 
 class DownloadRequest(BaseModel):
@@ -39,6 +41,7 @@ def download_video(
         raise HTTPException(status_code=400, detail="Only YouTube URLs are accepted.")
 
     temp_dir = TemporaryDirectory()
+    temp_path = Path(temp_dir.name)
     output_template = str(Path(temp_dir.name) / "%(title).80s.%(ext)s")
 
     options = {
@@ -49,6 +52,18 @@ def download_video(
         "quiet": True,
         "no_warnings": True,
     }
+
+    if YOUTUBE_COOKIES_BASE64:
+        cookies_path = temp_path / "cookies.txt"
+        try:
+            cookies_path.write_bytes(base64.b64decode(YOUTUBE_COOKIES_BASE64))
+        except Exception as exc:
+            temp_dir.cleanup()
+            raise HTTPException(
+                status_code=500,
+                detail="YOUTUBE_COOKIES_BASE64 is not valid base64.",
+            ) from exc
+        options["cookiefile"] = str(cookies_path)
 
     try:
         with YoutubeDL(options) as ydl:
