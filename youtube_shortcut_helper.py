@@ -88,6 +88,10 @@ def debug_info(
         "logger": logger,
         "verbose": True,
         "noplaylist": True,
+        "js_runtimes": {
+            "deno": {},
+            "node": {},
+        },
     }
 
     status = "Pending"
@@ -139,6 +143,10 @@ def download_video(
         "noplaylist": True,
         "quiet": True,
         "no_warnings": True,
+        "js_runtimes": {
+            "deno": {},
+            "node": {},
+        },
     }
 
     if YOUTUBE_COOKIES_BASE64:
