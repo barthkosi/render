@@ -1,6 +1,8 @@
 import base64
+import importlib.metadata
 import os
 from pathlib import Path
+import subprocess
 from tempfile import TemporaryDirectory
 from typing import Annotated
 
@@ -23,6 +25,94 @@ class DownloadRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"ok": True}
+
+
+class DebugLogger:
+    def __init__(self):
+        self.messages = []
+
+    def debug(self, msg):
+        self.messages.append(f"[DEBUG] {msg}")
+
+    def info(self, msg):
+        self.messages.append(f"[INFO] {msg}")
+
+    def warning(self, msg):
+        self.messages.append(f"[WARNING] {msg}")
+
+    def error(self, msg):
+        self.messages.append(f"[ERROR] {msg}")
+
+
+@app.get("/debug")
+def debug_info(
+    url: str = "https://www.youtube.com/watch?v=NVGuFdX5guE",
+    token: str | None = None,
+    authorization: Annotated[str | None, Header()] = None,
+):
+    if API_TOKEN:
+        authorized = False
+        if authorization == f"Bearer {API_TOKEN}":
+            authorized = True
+        elif token == API_TOKEN:
+            authorized = True
+
+        if not authorized:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # 1. yt-dlp version
+    try:
+        import yt_dlp
+        yt_dlp_version = yt_dlp.version.__version__
+    except Exception as e:
+        yt_dlp_version = f"Error: {str(e)}"
+
+    # 2. yt-dlp-ejs version
+    try:
+        yt_dlp_ejs_version = importlib.metadata.version("yt-dlp-ejs")
+    except importlib.metadata.PackageNotFoundError:
+        yt_dlp_ejs_version = "Not installed"
+    except Exception as e:
+        yt_dlp_ejs_version = f"Error: {str(e)}"
+
+    # 3. Node version
+    try:
+        res = subprocess.run(["node", "--version"], capture_output=True, text=True, timeout=10)
+        node_version = res.stdout.strip() if res.returncode == 0 else f"Exit code {res.returncode}: {res.stderr}"
+    except Exception as e:
+        node_version = f"Error: {str(e)}"
+
+    # 4. yt-dlp verbose output for url
+    logger = DebugLogger()
+    ydl_opts = {
+        "logger": logger,
+        "verbose": True,
+        "noplaylist": True,
+    }
+
+    status = "Pending"
+    try:
+        if YOUTUBE_COOKIES_BASE64:
+            with TemporaryDirectory() as temp_dir:
+                cookies_path = Path(temp_dir) / "cookies.txt"
+                cookies_path.write_bytes(base64.b64decode(YOUTUBE_COOKIES_BASE64))
+                ydl_opts["cookiefile"] = str(cookies_path)
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.extract_info(url, download=False)
+        else:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.extract_info(url, download=False)
+        status = "Success"
+    except Exception as e:
+        status = f"Error: {str(e)}"
+
+    return {
+        "yt_dlp_version": yt_dlp_version,
+        "yt_dlp_ejs_version": yt_dlp_ejs_version,
+        "node_version": node_version,
+        "extraction_status": status,
+        "logs": logger.messages,
+    }
 
 
 @app.post("/download")
