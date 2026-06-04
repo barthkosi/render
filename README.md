@@ -6,6 +6,7 @@ Use this only for videos you own, videos in the public domain, or videos you hav
 
 - `youtube_shortcut_helper.py`: API server.
 - `Dockerfile`: container image with Python, `yt-dlp`, and `ffmpeg`.
+- The Docker image also installs Node.js and `yt-dlp-ejs` so `yt-dlp` can solve YouTube JavaScript challenges.
 - `requirements.txt`: Python dependencies.
 - `render.yaml`: optional Render deploy config.
 
