@@ -45,7 +45,8 @@ def download_video(
     output_template = str(Path(temp_dir.name) / "%(title).80s.%(ext)s")
 
     options = {
-        "format": "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/best",
+        "format": "best[ext=mp4]/bv*+ba/best",
+        "format_sort": ["res:720", "ext:mp4:m4a"],
         "outtmpl": output_template,
         "merge_output_format": "mp4",
         "noplaylist": True,
