@@ -16,7 +16,7 @@ A self-hosted FastAPI helper designed to run on a VPS or Render. It serves as a 
 
 ## Files in the Repo
 
-- `youtube_shortcut_helper.py`: The FastAPI server code.
+- `downloader.py`: The FastAPI server code.
 - `Dockerfile`: Multi-stage environment installing Python 3.12, Node.js, `ffmpeg`, and dependencies.
 - `docker-compose.yml`: Simplified runner orchestration for VPS setups.
 - `requirements.txt`: Python package requirements.
@@ -128,7 +128,7 @@ You can test the server locally before deploying it to your VPS.
 
 1. **Start the API server**:
    ```bash
-   python youtube_shortcut_helper.py
+   python downloader.py
    ```
 2. **Download a YouTube video**:
    ```bash

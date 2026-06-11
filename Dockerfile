@@ -9,9 +9,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY youtube_shortcut_helper.py .
+COPY downloader.py .
 
 ENV PORT=8787
 EXPOSE 8787
 
-CMD ["sh", "-c", "uvicorn youtube_shortcut_helper:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn downloader:app --host 0.0.0.0 --port ${PORT}"]
