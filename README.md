@@ -1,150 +1,92 @@
-# Remotely Hosted Universal Video Downloader Shortcut Helper
+# Universal Video Downloader iOS Shortcut Guide (via Cobalt API)
 
-A self-hosted FastAPI helper designed to run on a VPS or Render. It serves as a secure, remote API backend for an iOS Shortcut to download videos from almost anywhere (**YouTube, TikTok, Instagram, Twitter/X, Vimeo, Facebook, and generic websites**) using the power of `yt-dlp` and `ffmpeg`.
-
----
-
-## Features
-
-- **Universal Support**: Download videos from any platform supported by `yt-dlp`.
-- **VPS-Ready**: Easy deployment using Docker or Docker Compose.
-- **Cookieless Operation**: Uses `yt-dlp-ejs` and Node.js in the container to solve JavaScript anti-bot challenges automatically. Running on a VPS with a clean IP usually avoids blocks entirely, meaning you don't have to manage cookies.
-- **Optional Multi-Site Cookies**: If you do need cookies (e.g. for age-restricted videos or private links), you can pass a single base64-encoded Netscape-format cookie file containing cookies for multiple domains.
-- **Token Authorization**: Secures your endpoint with an API token.
+This guide shows you how to set up a completely free, zero-hosting iOS Shortcut to download videos from almost anywhere (**YouTube, TikTok, Instagram, Twitter/X, Vimeo, Reddit, and more**) using the public **Cobalt API** (`https://api.cobalt.tools/api/json`).
 
 ---
 
-## Files in the Repo
+## Why Use the Cobalt Route?
 
-- `downloader.py`: The FastAPI server code.
-- `Dockerfile`: Multi-stage environment installing Python 3.12, Node.js, `ffmpeg`, and dependencies.
-- `docker-compose.yml`: Simplified runner orchestration for VPS setups.
-- `requirements.txt`: Python package requirements.
-- `render.yaml`: Blueprint configuration for Render.com.
-
----
-
-## Option A: Deploy on a VPS (Recommended)
-
-iOS Shortcuts require your API endpoint to use **HTTPS**. The easiest setup is to run this container on your VPS and reverse-proxy it behind a secure SSL layer using **Caddy**.
-
-### 1. Run via Docker Compose
-
-1. Clone or copy these files into a directory on your VPS.
-2. Edit `docker-compose.yml` to set your desired `API_TOKEN`.
-3. Launch the container in the background:
-   ```bash
-   docker compose up -d --build
-   ```
-
-Alternatively, run with a single Docker command:
-```bash
-docker build -t video-downloader .
-docker run -d \
-  --name video-downloader \
-  -p 8787:8787 \
-  -e API_TOKEN="your-secure-random-token-here" \
-  --restart unless-stopped \
-  video-downloader
-```
-
-### 2. Set Up HTTPS with Caddy
-
-Install Caddy on your server, point your domain/subdomain to your VPS IP, and add this to your `/etc/caddy/Caddyfile`:
-
-```caddy
-downloader.yourdomain.com {
-    reverse_proxy localhost:8787
-}
-```
-
-Restart Caddy:
-```bash
-sudo systemctl restart caddy
-```
-Caddy will automatically acquire and renew a free Let's Encrypt SSL certificate. Your endpoint is now:
-`https://downloader.yourdomain.com/download`
+- **100% Free**: No VPS subscription or cloud hosting fees.
+- **Zero Maintenance**: You don't need to update Python packages, Docker containers, or base64 cookies. The Cobalt maintainers handle bot challenges and IP bans on their end.
+- **Privacy-focused**: No tracking, ads, or bloated web interfaces.
+- **Multi-Platform Support**: Natively downloads from dozens of major video and audio sharing platforms.
 
 ---
 
-## Option B: Deploy on Render
+## Step-by-Step iOS Shortcut Setup
 
-1. Create a private GitHub repository with the files.
-2. Connect the repository to Render and create a new **Web Service** (using Docker).
-3. Set the following environment variable:
-   - `API_TOKEN` = `your-secure-random-token`
-4. If you encounter bot challenges, you can optionally set:
-   - `COOKIES_BASE64` = `your-base64-encoded-netscape-cookies`
-5. Deploy the service.
+Follow these steps to create your custom downloader shortcut on iPhone or iPad:
+
+### 1. Create the Shortcut
+1. Open the **Shortcuts** app on your iOS device.
+2. Tap the **+** icon in the top right to create a new shortcut.
+3. Rename the shortcut to: **Download Video** (tap the title at the top to rename).
+4. Tap the **i** (info) button at the bottom (or in the details menu) and turn on **Show in Share Sheet**.
+5. Set the input type to only accept **URLs** (e.g. tap *"Receive Any input from Share Sheet"*, clear all, and select only *URLs*).
 
 ---
 
-## Cookie-Free & VPS IP Reputation
+### 2. Add the Actions
+Add the following actions in order:
 
-By default, the application **does not require cookies** to function.
-- Cloud providers (like Render or AWS) share IP ranges that are heavily flagged by video platforms.
-- Hosting on a **VPS** grants you a dedicated, clean IP address. Combined with the pre-installed JavaScript-challenge solver (`yt-dlp-ejs`), you will typically be able to download videos completely cookieless.
-- If a platform like YouTube ever flags your VPS IP and shows a *"Sign in to confirm you're not a bot"* error, you can export your cookies (in Netscape format) from a signed-in browser session, base64-encode the file, and supply it via the `COOKIES_BASE64` environment variable.
+#### Action 1: Get URLs from Input
+- This extracts the video URL shared from Safari, YouTube, TikTok, etc.
 
-To encode a `cookies.txt` file into base64:
-- **Linux/macOS**:
-  ```bash
-  base64 -w 0 cookies.txt > encoded.txt
+#### Action 2: Get Contents of URL (Call Cobalt API)
+- Drag in the **Get Contents of URL** action.
+- Set the target URL to:
+  ```text
+  https://api.cobalt.tools/api/json
   ```
-- **Windows PowerShell**:
-  ```powershell
-  [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\to\cookies.txt"))
-  ```
+- Tap **Show More** / **Advanced** and configure:
+  - **Method**: `POST`
+  - **Headers**:
+    - `Accept`: `application/json`
+    - `Content-Type`: `application/json`
+  - **Request Body**: `JSON`
+  - **JSON Fields (Add these key-value pairs)**:
+    - `url` (type Text): select the **URL** variable (output of Action 1).
+    - `videoQuality` (type Text): `720` (options: `360`, `480`, `720`, `1080`, `max`).
+    - `filenamePattern` (type Text): `pretty` (options: `classic`, `pretty`, `basic`, `nerdy`).
+
+#### Action 3: Get Dictionary from Input
+- Choose the **Get Dictionary from Input** action.
+- Set its input to the **Contents of URL** (the JSON response from Cobalt).
+
+#### Action 4: Get Value from Dictionary
+- Choose the **Get Value for Key in Dictionary** action.
+- Set **Key** to: `url`
+- Set **Dictionary** to: the **Dictionary** variable from Action 3.
+- *Note: This retrieves the direct streaming/download URL returned by Cobalt.*
+
+#### Action 5: Get Contents of URL (Download Video File)
+- Add another **Get Contents of URL** action.
+- Set its target URL to the **Dictionary Value** (the download URL retrieved in Action 4).
+- *This downloads the actual video/media file directly to your phone.*
+
+#### Action 6: Save File
+- Add the **Save File** action.
+- Set its input to the downloaded file from Action 5.
+- Choose your preferred save location (e.g., `Shortcuts/Downloads` or ask where to save each time).
 
 ---
 
-## iOS Shortcut Setup
+## Advanced Options
 
-Create a new Shortcut on your iPhone/iPad to handle sharing and downloading:
+If you want to customize your downloads, you can add these optional fields to the JSON body in **Action 2**:
 
-1. **Shortcut Configuration**:
-   - Rename the Shortcut to: `Download Video`
-   - In Shortcut Settings, turn on **Show in Share Sheet**.
-   - Set "Shortcut receives" to only accept **URLs**.
+| Key | Type | Value | Description |
+| :--- | :--- | :--- | :--- |
+| `isAudioOnly` | Boolean | `true`/`false` | Downloads only the audio (e.g., MP3/M4A). Useful for music. |
+| `audioFormat` | Text | `mp3` | Choose `mp3`, `ogg`, `wav`, or `best` (default). |
+| `isFormatSelection` | Boolean | `true` | Attempts to download the exact requested video format/codec. |
 
-2. **Actions**:
-   - Add **Get URLs from Input**.
-   - Add **Get Contents of URL**:
-     - **URL**: `https://downloader.yourdomain.com/download` (or your Render URL)
-     - **Method**: `POST`
-     - **Headers**:
-       - `Authorization`: `Bearer your-api-token-here`
-     - **Request Body**: `JSON`
-     - **JSON Field**:
-       - `url`: `Shortcut Input URL`
-   - Add **Save File**:
-     - Save the response file to `iCloud Drive/Shortcuts/Downloads` (or any folder of your choice).
+For a complete list of settings, view the official [Cobalt API Documentation](https://github.com/imputnet/cobalt/blob/current/docs/api.md).
 
 ---
 
-## Testing the API Locally
+## Looking to Self-Host?
 
-You can test the server locally before deploying it to your VPS.
-
-1. **Start the API server**:
-   ```bash
-   python downloader.py
-   ```
-2. **Download a YouTube video**:
-   ```bash
-   curl -L \
-     -H "Authorization: Bearer your-api-token-here" \
-     -H "Content-Type: application/json" \
-     -d '{"url":"https://www.youtube.com/watch?v=NVGuFdX5guE"}' \
-     http://localhost:8787/download \
-     --output youtube_video.mp4
-   ```
-3. **Download a Vimeo or other platform video**:
-   ```bash
-   curl -L \
-     -H "Authorization: Bearer your-api-token-here" \
-     -H "Content-Type: application/json" \
-     -d '{"url":"https://vimeo.com/76979871"}' \
-     http://localhost:8787/download \
-     --output vimeo_video.mp4
-   ```
+If you ever want to run your own private downloader backend to avoid third-party API dependencies:
+1. Navigate to the [self-hosted/](./self-hosted) directory.
+2. Follow the instructions to deploy the FastAPI + `yt-dlp` helper on a VPS or Render.
