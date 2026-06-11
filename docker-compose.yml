@@ -1,0 +1,12 @@
+services:
+  downloader:
+    build: .
+    container_name: video-downloader
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      - PORT=8787
+      - API_TOKEN=your-very-secure-random-token-here
+      # Optional: Base64 Netscape cookies file for YouTube, IG, TikTok, etc.
+      # - COOKIES_BASE64=your-base64-string-here
