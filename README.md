@@ -11,6 +11,17 @@ This guide shows you how to set up a completely free, zero-hosting iOS Shortcut 
 - **Privacy-focused**: No tracking, ads, or bloated web interfaces.
 - **Multi-Platform Support**: Natively downloads from dozens of major video and audio sharing platforms.
 
+> [!IMPORTANT]
+> **Important Endpoint Changes**:
+> 1. The official Cobalt API at `https://api.cobalt.tools/` now requires JWT token/key authentication due to bot protection. You must use a **free, open community instance** instead.
+> 2. Cobalt recently upgraded to v10, which **shut down the old `/api/json` endpoint**. You must send `POST` requests directly to the **root** of the instance (e.g., `https://dog.kittycat.boo` instead of `https://dog.kittycat.boo/api/json`).
+>
+> **Working Community Instances (No Token Needed)**:
+> - `https://dog.kittycat.boo`
+> - `https://fox.kittycat.boo`
+> - `https://cobaltapi.kittycat.boo`
+> - `https://rue-cobalt.xenon.zone`
+
 ---
 
 ## Step-by-Step iOS Shortcut Setup
@@ -34,9 +45,9 @@ Add the following actions in order:
 
 #### Action 2: Get Contents of URL (Call Cobalt API)
 - Drag in the **Get Contents of URL** action.
-- Set the target URL to:
+- Set the target URL to one of the working community instances (e.g. `https://dog.kittycat.boo`):
   ```text
-  https://api.cobalt.tools/api/json
+  https://dog.kittycat.boo
   ```
 - Tap **Show More** / **Advanced** and configure:
   - **Method**: `POST`
