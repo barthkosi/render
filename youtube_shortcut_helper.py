@@ -15,11 +15,11 @@ from yt_dlp import YoutubeDL
 
 app = FastAPI(title="YouTube Shortcut Helper")
 API_TOKEN = os.getenv("API_TOKEN")
-YOUTUBE_COOKIES_BASE64 = os.getenv("YOUTUBE_COOKIES_BASE64")
+COOKIES_BASE64 = os.getenv("COOKIES_BASE64") or os.getenv("YOUTUBE_COOKIES_BASE64")
 
 
 class DownloadRequest(BaseModel):
-    url: Annotated[HttpUrl, "YouTube video URL"]
+    url: Annotated[HttpUrl, "Video URL"]
 
 
 @app.get("/health")
@@ -96,10 +96,10 @@ def debug_info(
 
     status = "Pending"
     try:
-        if YOUTUBE_COOKIES_BASE64:
+        if COOKIES_BASE64:
             with TemporaryDirectory() as temp_dir:
                 cookies_path = Path(temp_dir) / "cookies.txt"
-                cookies_path.write_bytes(base64.b64decode(YOUTUBE_COOKIES_BASE64))
+                cookies_path.write_bytes(base64.b64decode(COOKIES_BASE64))
                 ydl_opts["cookiefile"] = str(cookies_path)
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.extract_info(url, download=False)
@@ -131,9 +131,6 @@ def download_video(
 
     url = str(request.url)
 
-    if "youtube.com" not in url and "youtu.be" not in url:
-        raise HTTPException(status_code=400, detail="Only YouTube URLs are accepted.")
-
     temp_dir = TemporaryDirectory()
     temp_path = Path(temp_dir.name)
     output_template = str(Path(temp_dir.name) / "%(title).80s.%(ext)s")
@@ -149,15 +146,15 @@ def download_video(
         },
     }
 
-    if YOUTUBE_COOKIES_BASE64:
+    if COOKIES_BASE64:
         cookies_path = temp_path / "cookies.txt"
         try:
-            cookies_path.write_bytes(base64.b64decode(YOUTUBE_COOKIES_BASE64))
+            cookies_path.write_bytes(base64.b64decode(COOKIES_BASE64))
         except Exception as exc:
             temp_dir.cleanup()
             raise HTTPException(
                 status_code=500,
-                detail="YOUTUBE_COOKIES_BASE64 is not valid base64.",
+                detail="COOKIES_BASE64 is not valid base64.",
             ) from exc
         base_options["cookiefile"] = str(cookies_path)
 
